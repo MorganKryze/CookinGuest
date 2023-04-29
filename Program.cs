@@ -34,19 +34,97 @@ public class Program
         MainMenu:
 
         #region MainMenu
-        switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Se connecter", "S'inscrire","Options", "Quitter"}))
-        {
-            case 0:
-                goto Connecter;
-            case 1:
-                Console.Clear();
-                Console.WriteLine("S'inscrire");
-                break;
-            case 2:
-                goto Options;
-            case 3:
-                goto Quitter;
-        }
+        if (utilisateur is Profil.NonDefini)
+            switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Se connecter", "S'inscrire","Options", "Quitter"}))
+            {
+                case 0:
+                    goto Connecter;
+                case 1:
+                    goto Inscription;
+                case 2:
+                    goto Options;
+                case 3:
+                    goto Quitter;
+                default:
+                    goto MainMenu;
+            }
+        else if (utilisateur is Profil.Client)
+            switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Rechercher un évènement", "Créer un évènement", "Options", "Déconnexion"}))
+            {
+                case 0:
+                    Console.Clear();
+                    Console.WriteLine("Rechercher un évènement");
+                    break;
+                case 1:
+                    Console.Clear();
+                    Console.WriteLine("Créer un évènement");
+                    break;
+                case 2:
+                    goto Options;
+                case 3:
+                    utilisateur = Profil.NonDefini;
+                    email = "";
+                    mdp = "";
+                    goto MainMenu;
+                default:
+                    goto MainMenu;
+            }
+        else if (utilisateur is Profil.Createur)
+            switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Rechercher un évènement", "Créer un évènement", "Gérer mes évènements", "Options", "Déconnexion"}))
+            {
+                case 0:
+                    Console.Clear();
+                    Console.WriteLine("Rechercher un évènement");
+                    break;
+                case 1:
+                    Console.Clear();
+                    Console.WriteLine("Créer un évènement");
+                    break;
+                case 2:
+                    Console.Clear();
+                    Console.WriteLine("Gérer mes évènements");
+                    break;
+                case 3:
+                    goto Options;
+                case 4:
+                    utilisateur = Profil.NonDefini;
+                    email = "";
+                    mdp = "";
+                    goto MainMenu;
+                default:
+                    goto MainMenu;
+            }
+        else if (utilisateur is Profil.Administrateur)
+            switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Rechercher un évènement", "Créer un évènement", "Gérer mes évènements", "Gérer les évènements", "Options", "Déconnexion"}))
+            {
+                case 0:
+                    Console.Clear();
+                    Console.WriteLine("Rechercher un évènement");
+                    break;
+                case 1:
+                    Console.Clear();
+                    Console.WriteLine("Créer un évènement");
+                    break;
+                case 2:
+                    Console.Clear();
+                    Console.WriteLine("Gérer mes évènements");
+                    break;
+                case 3:
+                    Console.Clear();
+                    Console.WriteLine("Gérer les évènements");
+                    break;
+                case 4:
+                    goto Options;
+                case 5:
+                    utilisateur = Profil.NonDefini;
+                    email = "";
+                    mdp = "";
+                    goto MainMenu;
+                default:
+                    goto MainMenu;
+            }
+        else
+            throw new Exception("The user profile is not defined.");
         #endregion
 
         Connecter:
@@ -96,6 +174,7 @@ public class Program
                         utilisateur = Profil.Createur;
                     else
                         utilisateur = Profil.Client;
+                    goto MainMenu;
                 }
                 else 
                 {
@@ -108,6 +187,54 @@ public class Program
                     }
                 }
 
+            }
+        }
+        #endregion
+
+        Inscription:
+
+        #region Inscription
+        email = WritePrompt("Veuillez entrer votre email : ");
+        query = $"SELECT Mail FROM Client WHERE Mail = '{email}'";
+        command = Command(query);
+        if (command.ExecuteScalar() is null)
+        {
+            mdp = WritePassword("Veuillez entrer votre mot de passe : ");
+            string nom = WritePrompt("Veuillez entrer votre nom : ");
+            string prenom = WritePrompt("Veuillez entrer votre prénom : ");
+            int age = int.Parse(WritePrompt("Veuillez entrer votre âge : "));
+            string telephone = WritePrompt("Veuillez entrer votre numéro de téléphone : ");
+            string domicile = WritePrompt("Veuillez entrer votre adresse : ");
+            int pointBonus = 0;
+            switch(ScrollingMenu("Veuillez choisir votre profil", new string[]{"Client", "Créateur"}))
+            {
+                case 0:
+                    query = $"INSERT INTO Client (Nom, Prenom, Age, Telephone, Domicile, Mail, PtsBonus, MDP, Createur) VALUES ('{nom}', '{prenom}', '{age}', '{telephone}', '{domicile}', '{email}', '{pointBonus}', '{mdp}', false)";
+                    utilisateur = Profil.Client;
+                    break;
+                case 1:
+                    query = $"INSERT INTO Client (Nom, Prenom, Age, Telephone, Domicile, Mail, PtsBonus, MDP, Createur) VALUES ('{nom}', '{prenom}', '{age}', '{telephone}', '{domicile}', '{email}', '{pointBonus}', '{mdp}', true)";
+                    utilisateur = Profil.Createur;
+                    break;
+                default:
+                    query = $"INSERT INTO Client (Nom, Prenom, Age, Telephone, Domicile, Mail, PtsBonus, MDP, Createur) VALUES ('{nom}', '{prenom}', '{age}', '{telephone}', '{domicile}', '{email}', '{pointBonus}', '{mdp}', false)";
+                    utilisateur = Profil.Client;
+                    break;
+            }       
+            command = Command(query);
+            command.ExecuteNonQuery();
+            WriteParagraph(new string[]{" Votre compte a bien été créé ! ", " Presser une touche pour continuer... "});
+            ReadKey(true);
+            goto MainMenu;
+        }
+        else
+        {
+            switch (ScrollingMenu("Un compte existe déjà avec cet email, recommencer ?", new string[] { "Oui", "Non" }))
+            {
+                case 0:
+                    goto Inscription;
+                default:
+                    goto MainMenu;
             }
         }
         #endregion

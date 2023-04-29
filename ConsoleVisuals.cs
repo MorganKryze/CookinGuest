@@ -262,7 +262,7 @@ public static class ConsoleVisuals
                     prompt += key.KeyChar;
             CursorVisible = false;
             }
-            
+            CursorVisible = false;
         } while (prompt is "");
         ClearPanel(line, 3);
         return prompt;
