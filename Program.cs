@@ -115,27 +115,21 @@ public class Program
         else if (utilisateur is Profil.Administrateur)
         {
             ClearContent();
-            switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Rechercher un évènement", "Créer un évènement", "Gérer mes évènements", "Gérer les évènements", "Options", "Déconnexion"}))
+            switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Ajouter Client", "Supprimer Client", "Supprimer Recette","Supprimer Commande", "Ajouter Fournisseur", "Options", "Déconnexion"}))
             {
                 case 0:
-                    Console.Clear();
-                    Console.WriteLine("Rechercher un évènement");
-                    break;
+                    goto Inscription;
                 case 1:
-                    Console.Clear();
-                    Console.WriteLine("Créer un évènement");
-                    break;
+                    goto SupprimerClient;
                 case 2:
-                    Console.Clear();
-                    Console.WriteLine("Gérer mes évènements");
-                    break;
+                    goto SupprimerRecette;
                 case 3:
-                    Console.Clear();
-                    Console.WriteLine("Gérer les évènements");
-                    break;
+                    goto SupprimerCommande;
                 case 4:
-                    goto Options;
+                    break;
                 case 5:
+                    goto Options;
+                case 6:
                     utilisateur = Profil.NonDefini;
                     email = "";
                     mdp = "";
@@ -176,7 +170,7 @@ public class Program
                 switch (ScrollingMenu("Aucune correspondance dans la base de données, recommencer ?", new string[] { "Oui", "Non" }))
                 {
                     case 0:
-                        goto Connecter;
+                        goto PassWord;
                     default:
                         goto MainMenu;
                 }
@@ -234,27 +228,24 @@ public class Program
             int age = int.Parse(WritePrompt("Veuillez entrer votre âge : "));
             string telephone = WritePrompt("Veuillez entrer votre numéro de téléphone : ");
             string domicile = WritePrompt("Veuillez entrer votre adresse : ");
-            int pointBonus = 0;
             switch(ScrollingMenu("Veuillez choisir votre profil", new string[]{"Client", "Créateur"}))
             {
-                case 0:
-                    query = $"INSERT INTO Client (Nom, Prenom, Age, Telephone, Domicile, Mail, PtsBonus, MDP, Createur) VALUES ('{nom}', '{prenom}', '{age}', '{telephone}', '{domicile}', '{email}', '{pointBonus}', '{mdp}', false)";
-                    utilisateur = Profil.Client;
-                    break;
                 case 1:
-                    query = $"INSERT INTO Client (Nom, Prenom, Age, Telephone, Domicile, Mail, PtsBonus, MDP, Createur) VALUES ('{nom}', '{prenom}', '{age}', '{telephone}', '{domicile}', '{email}', '{pointBonus}', '{mdp}', true)";
-                    utilisateur = Profil.Createur;
+                    query = $"INSERT INTO Client (Nom, Prenom, Age, Telephone, Domicile, Mail, PtsBonus, Solde, MDP, Createur) VALUES ('{nom}', '{prenom}', '{age}', '{telephone}', '{domicile}', '{email}', 0, 0, '{mdp}', true)";
+                    if (utilisateur is not Profil.Administrateur)
+                        utilisateur = Profil.Createur;
                     break;
                 default:
-                    query = $"INSERT INTO Client (Nom, Prenom, Age, Telephone, Domicile, Mail, PtsBonus, MDP, Createur) VALUES ('{nom}', '{prenom}', '{age}', '{telephone}', '{domicile}', '{email}', '{pointBonus}', '{mdp}', false)";
-                    utilisateur = Profil.Client;
+                    query = $"INSERT INTO Client (Nom, Prenom, Age, Telephone, Domicile, Mail, PtsBonus, Solde, MDP, Createur) VALUES ('{nom}', '{prenom}', '{age}', '{telephone}', '{domicile}', '{email}', 0,0, '{mdp}', false)";
+                    if (utilisateur is not Profil.Administrateur)
+                        utilisateur = Profil.Client;
                     break;
             }       
             command = Command(query);
             command.ExecuteNonQuery();
             if (utilisateur == Profil.Createur)
                 WriteBanner((" Projet BDD", "Créateur", "Réalisé par Dimitry et Clément "), true, true);
-            else
+            else if (utilisateur == Profil.Client)
                 WriteBanner((" Projet BDD", "Client", "Réalisé par Dimitry et Clément "), true, true);
             WriteParagraph(new string[]{" Votre compte a bien été créé ! ", " Presser une touche pour continuer... "});
             ReadKey(true);
@@ -272,10 +263,108 @@ public class Program
         }
         #endregion
 
+        SupprimerClient:
+
+        #region SupprimerClient
+        ClearContent();
+        query = $"SELECT Nom, Prenom, Mail, Createur FROM Client;";
+        reader = Reader(query);
+        List<string> clients = new List<string>();
+        List<string> mails = new List<string>();
+        WriteParagraph(new string[] { "Veuillez sélectionner le compte client à supprimer :" }, false);
+        while (reader.Read())
+        {
+            clients.Add($"{reader.GetString(0),-20} {reader.GetString(1),-20} {reader.GetString(2),-20} {reader.GetBoolean(3),-20}");
+            mails.Add(reader.GetString(2));
+        }
+        string prompt = $"{reader.GetName(0),-20} {reader.GetName(1),-20} {reader.GetName(2),-20} {reader.GetName(3),-20}";
+        reader.Close();
+        int pos = ScrollingMenu(prompt, clients.ToArray(), Placement.Center, CursorTop + 2, false, 0, 0, true);
+        if (pos == -1)
+            goto MainMenu;
+        int choixDel = ScrollingMenu("Voulez-vous vraiment supprimer ce compte ?", new string[] { "Oui", "Non" });
+        if (choixDel == 1 || choixDel == -1)
+            goto SupprimerClient;
+        else
+        { 
+            // vérifier si le client est créateur
+            query = $"SELECT Createur FROM Client WHERE Mail = '{mails[pos]}'";
+            command = Command(query);
+            if (command.ExecuteScalar().ToString() == "True")
+            {
+                //supprimer les produit dans QuantiteProduit où apparaît l'id de ses recettes
+                query = $"DELETE FROM QuantiteProduit WHERE idRecette IN (SELECT idRecette FROM Recette WHERE idClient = (SELECT idClient FROM Client WHERE Mail = '{mails[pos]}'))";
+                command = Command(query);
+                command.ExecuteNonQuery();
+                //supprimer ses recettes
+                query = $"DELETE FROM Recette WHERE idClient = (SELECT idClient FROM Client WHERE Mail = '{mails[pos]}')"; 
+                command = Command(query);
+                command.ExecuteNonQuery();
+            }
+            //supprimer dans DetCommandes
+            query = $"DELETE FROM DetCommande WHERE idCommande = (SELECT idCommande FROM Commande WHERE idClient = (SELECT idClient FROM Client WHERE Mail = '{mails[pos]}'))"; 
+            command = Command(query);
+            command.ExecuteNonQuery();
+            //supprmier ses commandes 
+            query = $"DELETE FROM Commande WHERE idClient = (SELECT idClient FROM Client WHERE Mail = '{mails[pos]}')"; 
+            command = Command(query);
+            command.ExecuteNonQuery();
+            //supprimer le client
+            query = $"DELETE FROM Client WHERE Mail = '{mails[pos]}'";
+            command = Command(query);
+            command.ExecuteNonQuery();
+        }
+        
+        if (clients.Count > 0)
+            goto SupprimerClient;
+        else
+            goto MainMenu;
+        #endregion
+
+        SupprimerCommande:
+
+        #region SupprimerCommande
+        ClearContent();
+        query = $"SELECT idCommande, date, adresse, idClient FROM Commande;";
+        reader = Reader(query);
+        List<string> commandes = new List<string>();
+        List<int> ids = new List<int>();
+        WriteParagraph(new string[] { "Veuillez sélectionner la commande à supprimer :" }, false);
+        while (reader.Read())
+        {
+            commandes.Add($"{reader.GetInt32(0),-20} {reader.GetDateTime(1),-20} {reader.GetString(2),-20} {reader.GetInt32(3),-20}");
+            ids.Add(reader.GetInt32(0));
+        }
+        prompt = $"{reader.GetName(0),-20} {reader.GetName(1),-20} {reader.GetName(2),-20} {reader.GetName(3),-20}";
+        reader.Close();
+        pos = ScrollingMenu(prompt, commandes.ToArray(), Placement.Center, CursorTop + 2, false, 0, 0, true);
+        if (pos == -1)
+            goto MainMenu;
+        choixDel = ScrollingMenu("Voulez-vous vraiment supprimer cette commande ?", new string[] { "Oui", "Non" }, Placement.Center, CursorTop + 1);
+        if (choixDel == 1 || choixDel == -1)
+            goto SupprimerCommande;
+        else
+        {
+            //supprimer dans DetCommandes
+            query = $"DELETE FROM DetCommande WHERE idCommande = {ids[pos]}";
+            command = Command(query);
+            command.ExecuteNonQuery();
+            //supprimer la commande
+            query = $"DELETE FROM Commande WHERE idCommande = {ids[pos]}";
+            command = Command(query);
+            command.ExecuteNonQuery();
+        }
+        if (commandes.Count > 0)
+            goto SupprimerCommande;
+        else
+            goto MainMenu;
+        #endregion        
+        
         AcheterRecette:
 
         #region AcheterRecette
         #region Affichage infos client
+        ClearContent();
         reader = Reader($"SELECT Prenom, Nom, Domicile, PtsBonus FROM Client WHERE Mail = '{email}'");
         WriteParagraph(new string[] { $"{reader.GetName(0),-20} {reader.GetName(1),-20} {reader.GetName(2),-20} {reader.GetName(3),-20}" }, true);
         while (reader.Read())
@@ -380,7 +469,7 @@ public class Program
                 ingredients.RemoveAt(numIngredient);
             }
         }
-
+        ClearContent();
         float prixRecette = (int)NumberSelector("Veuillez entrer le prix de la recette :", 0f, 20f, 0f, 1f);
         int ptsBonusRecette = (int)NumberSelector("Veuillez entrer le nombre de points bonus de la recette :", 0f, 30f, 0f, 1f);
 
@@ -405,13 +494,40 @@ public class Program
         SupprimerRecette:
 
         #region SupprimerRecette
+        if (utilisateur is Profil.Createur)
+            query = $"SELECT NomRec FROM Recette WHERE idClient = (SELECT idClient FROM Client WHERE Mail = '{email}')";
+        else
+            query = $"SELECT NomRec FROM Recette";
+        List<string> recettesDel = new List<string>();
+        reader = Reader(query);
+        while (reader.Read())
+            recettesDel.Add(reader.GetString(0));
+        recettesDel.Add("Retour");
+        WriteParagraph(new string[]{"Veuillez choisir la recette à supprimer"});
+        int numRecetteDel = ScrollingMenu("Nom de Recette".BuildString(20), recettesDel.ToArray(), Placement.Center, CursorTop + 2, true, 1500, 0, true);
+        reader.Close();
+        if (numRecetteDel == recettesDel.Count - 1 || numRecetteDel == -1)
+            goto MainMenu;
+        else
+        {
+            int choixDelCom = ScrollingMenu("Voulez-vous vraiment supprimer cette recette ?", new string[] { "Oui", "Non" });
+            if (choixDelCom == 1 || choixDelCom == -1)
+                goto SupprimerRecette;
+            query = $"DELETE FROM Recette WHERE NomRec = '{recettesDel[numRecetteDel]}'";
+            command = Command(query);
+            command.ExecuteNonQuery();
 
-        goto MainMenu;
+            query = $"DELETE FROM QuantiteProduit WHERE idRecette = (SELECT idRecette FROM Recette WHERE NomRec = '{recettesDel[numRecetteDel]}')";
+            command = Command(query);
+            command.ExecuteNonQuery();
+        }
+        goto SupprimerRecette;
         #endregion
 
         Options:
 
         #region Options
+        ClearContent();
         switch (ScrollingMenu("Veuillez sélectionner une option", new string[]{
                     "Changer de couleur",
                     "Changer description",
@@ -468,7 +584,6 @@ public class Program
         ProgramExit();
         #endregion
     }
-
     public static MySqlConnection InitializeConnection()
     {
         string jsonString = File.ReadAllText("settings.json");
@@ -482,7 +597,6 @@ public class Program
             throw new NullReferenceException("The dictionary is null.");
         return new MySqlConnection($"server={dico["server"]};port={dico["port"]};database={dico["database"]};user={dico["user"]};password={dico["password"]};"); 
     }
-
     public static MySqlCommand Command(string query) => new MySqlCommand(query, connection);
     public static MySqlDataReader Reader(string query) => Command(query).ExecuteReader();
     #endregion
