@@ -23,7 +23,7 @@ public static class ConsoleVisuals
     #endregion
 
     #region Private properties
-    public static (string, string, string) defaultHeader = (" Projet BDD", "Exécution...", "Réalisé par Dimitry et Clément ");
+    public static (string, string, string) defaultHeader = (" Projet BDD", "Accueil", "Réalisé par Dimitry et Clément ");
     public static (string, string, string) defaultFooter = (" [ESC] Retour", "[Z|↑] Monter   [S|↓] Descendre", "[ENTRER] Sélectionner ");
     private static int TitleHeight => titleContent.Length;
     private static int HeaderHeigth => TitleHeight ;
@@ -294,7 +294,7 @@ public static class ConsoleVisuals
     /// <param name="choices"> The choices of the menu. </param>
     /// <param name="line"> The line where the menu is printed. </param>
     /// <returns> The choice of the user. </returns>
-    public static int ScrollingMenu(string question, string[] choices, Placement location = Placement.Center, int line = -1, bool clear = true, int delay = 1500, int posdefaut = 0)
+    public static int ScrollingMenu(string question, string[] choices, Placement location = Placement.Center, int line = -1, bool clear = true, int delay = 1500, int posdefaut = 0, bool negative = false)
     {
         IsScreenUpdated();
         if (line == -1)
@@ -305,7 +305,7 @@ public static class ConsoleVisuals
         for (int i = 0; i < choices.Length; i++) 
             choices[i] = choices[i].PadRight(maxLength);
 
-        ContinuousPrint(question, line, default, delay, 50);
+        ContinuousPrint(question, line, negative, delay, 50);
         while (true)
         {
             string[] currentChoice = new string[choices.Length];

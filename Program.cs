@@ -1,4 +1,5 @@
-﻿using MySql.Data.MySqlClient;
+﻿using System.Diagnostics;
+using MySql.Data.MySqlClient;
 using System.Text.Json;
 using static System.ConsoleColor;
 using static CookinGuest.ConsoleVisuals;
@@ -11,7 +12,6 @@ public class Program
     #region Variables
     public static MySqlConnection connection = InitializeConnection();
     public static MySqlCommand command = new MySqlCommand("", connection);
-    //public static MySqlDataReader reader = new MySqlDataReader("");
     public static Profil utilisateur = Profil.NonDefini;
     public static string email = "";
     public static string mdp = "";
@@ -30,6 +30,8 @@ public class Program
     {
         connection.Open();
         WriteFullScreen(default);
+        MySqlDataReader reader = Reader("SELECT * FROM Client");
+        reader.Close();
 
         MainMenu:
 
@@ -49,26 +51,35 @@ public class Program
                     goto MainMenu;
             }
         else if (utilisateur is Profil.Client)
-            switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Rechercher un évènement", "Créer un évènement", "Options", "Déconnexion"}))
+        {
+            reader = Reader($"SELECT Prenom, Nom, Age, Telephone, Domicile FROM Client WHERE Mail = '{email}'");
+            WriteParagraph(new string[]{$"{reader.GetName(0),-20} {reader.GetName(1),-20} {reader.GetName(2),-20}"}, true);
+            while (reader.Read())
+                WriteParagraph(new string[]{$"{reader.GetString(0),-20} {reader.GetString(1),-20} {reader.GetString(2),-20}" }, false, CursorTop + 1);
+            reader.Close();
+
+            command = new MySqlCommand($"SELECT Prenom FROM Client WHERE Mail = '{email}'", connection);
+            string? prenom = command.ExecuteScalar().ToString();
+            switch(ScrollingMenu($"Bienvenue sur la plateforme CookinGuest {prenom} !", new string[]{"Acheter une recette", "Options", "Déconnexion"}, Placement.Center, CursorTop +2))
             {
                 case 0:
-                    Console.Clear();
-                    Console.WriteLine("Rechercher un évènement");
-                    break;
+                    ClearContent();
+                    goto AcheterRecette;
                 case 1:
-                    Console.Clear();
-                    Console.WriteLine("Créer un évènement");
-                    break;
-                case 2:
+                    ClearContent();
                     goto Options;
-                case 3:
+                case 2:
+                    ClearContent();
                     utilisateur = Profil.NonDefini;
                     email = "";
                     mdp = "";
+                    WriteBanner((" Projet BDD", "Accueil", "Réalisé par Dimitry et Clément "), true, true);
                     goto MainMenu;
                 default:
+                    ClearContent();
                     goto MainMenu;
             }
+        }
         else if (utilisateur is Profil.Createur)
             switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Rechercher un évènement", "Créer un évènement", "Gérer mes évènements", "Options", "Déconnexion"}))
             {
@@ -90,6 +101,7 @@ public class Program
                     utilisateur = Profil.NonDefini;
                     email = "";
                     mdp = "";
+                    WriteBanner((" Projet BDD", "Accueil", "Réalisé par Dimitry et Clément "), true, true);
                     goto MainMenu;
                 default:
                     goto MainMenu;
@@ -119,6 +131,7 @@ public class Program
                     utilisateur = Profil.NonDefini;
                     email = "";
                     mdp = "";
+                    WriteBanner((" Projet BDD", "Accueil", "Réalisé par Dimitry et Clément "), true, true);
                     goto MainMenu;
                 default:
                     goto MainMenu;
@@ -164,6 +177,7 @@ public class Program
                 if (email == "admin" && mdp == "staff")
                 {
                     utilisateur = Profil.Administrateur;
+                    WriteBanner((" Projet BDD", "Admin", "Réalisé par Dimitry et Clément "), true, true);
                     goto MainMenu;
                 }
                 else if (command.ExecuteScalar().ToString() == mdp)
@@ -171,9 +185,15 @@ public class Program
                     query = $"SELECT Createur FROM Client WHERE Mail = '{email}'";
                     command = new MySqlCommand(query, connection);
                     if (command.ExecuteScalar().ToString() == "1")
+                    {
                         utilisateur = Profil.Createur;
+                        WriteBanner((" Projet BDD", "Créateur", "Réalisé par Dimitry et Clément "), true, true);
+                    }
                     else
+                    {
                         utilisateur = Profil.Client;
+                        WriteBanner((" Projet BDD", "Client", "Réalisé par Dimitry et Clément "), true, true);
+                    }
                     goto MainMenu;
                 }
                 else 
@@ -223,6 +243,10 @@ public class Program
             }       
             command = Command(query);
             command.ExecuteNonQuery();
+            if (utilisateur == Profil.Createur)
+                WriteBanner((" Projet BDD", "Créateur", "Réalisé par Dimitry et Clément "), true, true);
+            else
+                WriteBanner((" Projet BDD", "Client", "Réalisé par Dimitry et Clément "), true, true);
             WriteParagraph(new string[]{" Votre compte a bien été créé ! ", " Presser une touche pour continuer... "});
             ReadKey(true);
             goto MainMenu;
@@ -237,6 +261,66 @@ public class Program
                     goto MainMenu;
             }
         }
+        #endregion
+
+        AcheterRecette:
+
+        #region AcheterRecette
+        #region Affichage infos client
+        reader = Reader($"SELECT Prenom, Nom, Domicile, PtsBonus FROM Client WHERE Mail = '{email}'");
+        WriteParagraph(new string[] { $"{reader.GetName(0),-20} {reader.GetName(1),-20} {reader.GetName(2),-20} {reader.GetName(3),-20}" }, true);
+        while (reader.Read())
+            WriteParagraph(new string[] { $"{reader.GetString(0),-20} {reader.GetString(1),-20} {reader.GetString(2),-20} {reader.GetInt32(3),-20}" }, false, CursorTop + 1);
+        reader.Close();
+        #endregion
+
+        #region Affichage recettes
+        reader = Reader($"SELECT NomRec, CategorieRec, DescriptifRec, Prix, PtsBonus FROM Recette");
+        WriteParagraph(new string[] { "Veuillez choisir la recette que vous souhaitez acheter parmi les propositions : " }, false, CursorTop + 2);
+        List<string> recettes = new List<string>();
+        while (reader.Read())
+        {
+            recettes.Add($"{reader.GetString(0),-20} {reader.GetString(1),-20} {reader.GetString(2),-50} {reader.GetInt32(3),-20} {reader.GetInt32(4),-20}");
+        }
+        
+        int numRecette = ScrollingMenu($"{reader.GetName(0),-30} {reader.GetName(1),-30} {reader.GetName(2),-50} {reader.GetName(3),-25} {reader.GetName(4),-25}", recettes.ToArray(), Placement.Center, CursorTop + 2, true, 1500, 0, true);
+        reader.Close();
+        ClearContent();
+        int nombreCommandes = (int)NumberSelector("Veuillez choisir le nombre de recettes que vous souhaitez acheter", 1f, 10f, 1f, 1f);
+        if (nombreCommandes == -1)
+            nombreCommandes = 1;
+        #endregion
+
+        #region Ajouter Commande
+        query = $"SELECT domicile FROM Client WHERE Mail = '{email}'";
+        command = Command(query);
+        string adresse = (string)command.ExecuteScalar();
+
+        query = $"SELECT idClient FROM Client WHERE Mail = '{email}'";
+        command = Command(query);
+        int idClient = (int)command.ExecuteScalar();
+
+        query = $"INSERT INTO Commande (date, adresse, idClient) VALUES ('{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}', '{adresse}', {idClient})";
+        command = Command(query);
+        command.ExecuteNonQuery();
+
+        query = $"INSERT INTO DetCommande(idRecette, idCommande, QCommande) VALUES ({numRecette + 1}, (SELECT MAX(idCommande) FROM Commande), {nombreCommandes})";
+        command = Command(query);
+        command.ExecuteNonQuery();
+        #endregion
+
+        #region Ajouter Points Bonus
+        // augmenter les pts bonus du client qui a proposé la recette 
+        query = $"UPDATE Client SET PtsBonus = PtsBonus + (SELECT PtsBonus FROM Recette WHERE NomRec = (SELECT NomRec FROM Recette WHERE idRecette = {numRecette + 1})) WHERE idClient = (SELECT idClient FROM Recette WHERE idRecette = {numRecette + 1})";
+        command = Command(query);
+        command.ExecuteNonQuery();
+
+        query = $"UPDATE Client SET Solde = Solde + 2 * (SELECT PtsBonus FROM Recette WHERE NomRec = (SELECT NomRec FROM Recette WHERE idRecette = {numRecette + 1})) WHERE idClient = (SELECT idClient FROM Recette WHERE idRecette = {numRecette + 1})";
+        command = Command(query);
+        command.ExecuteNonQuery();
+        #endregion
+
+        goto MainMenu;
         #endregion
 
         Options:
