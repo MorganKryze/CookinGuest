@@ -37,6 +37,8 @@ public class Program
 
         #region MainMenu
         if (utilisateur is Profil.NonDefini)
+        {
+            ClearContent();
             switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Se connecter", "S'inscrire","Options", "Quitter"}))
             {
                 case 0:
@@ -50,8 +52,10 @@ public class Program
                 default:
                     goto MainMenu;
             }
+        }
         else if (utilisateur is Profil.Client)
         {
+            ClearContent();
             reader = Reader($"SELECT Prenom, Nom, Age, Telephone, Domicile FROM Client WHERE Mail = '{email}'");
             WriteParagraph(new string[]{$"{reader.GetName(0),-20} {reader.GetName(1),-20} {reader.GetName(2),-20}"}, true);
             while (reader.Read())
@@ -81,20 +85,21 @@ public class Program
             }
         }
         else if (utilisateur is Profil.Createur)
-            switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Rechercher un évènement", "Créer un évènement", "Gérer mes évènements", "Options", "Déconnexion"}))
+        {
+            ClearContent();
+            reader = Reader($"SELECT Prenom, Nom, Age, Telephone, Domicile FROM Client WHERE Mail = '{email}'");
+            WriteParagraph(new string[] { $"{reader.GetName(0),-20} {reader.GetName(1),-20} {reader.GetName(2),-20}" }, true);
+            while (reader.Read())
+                WriteParagraph(new string[] { $"{reader.GetString(0),-20} {reader.GetString(1),-20} {reader.GetString(2),-20}" }, false, CursorTop + 1);
+            reader.Close();
+            switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Acheter recette", "Créer recette", "Supprimer recette", "Options", "Déconnexion"}, Placement.Center, CursorTop + 2))
             {
                 case 0:
-                    Console.Clear();
-                    Console.WriteLine("Rechercher un évènement");
-                    break;
+                    goto AcheterRecette;
                 case 1:
-                    Console.Clear();
-                    Console.WriteLine("Créer un évènement");
-                    break;
+                    goto CreerRecette;
                 case 2:
-                    Console.Clear();
-                    Console.WriteLine("Gérer mes évènements");
-                    break;
+                    goto SupprimerRecette;
                 case 3:
                     goto Options;
                 case 4:
@@ -106,7 +111,10 @@ public class Program
                 default:
                     goto MainMenu;
             }
+        }
         else if (utilisateur is Profil.Administrateur)
+        {
+            ClearContent();
             switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Rechercher un évènement", "Créer un évènement", "Gérer mes évènements", "Gérer les évènements", "Options", "Déconnexion"}))
             {
                 case 0:
@@ -136,6 +144,7 @@ public class Program
                 default:
                     goto MainMenu;
             }
+        }
         else
             throw new Exception("The user profile is not defined.");
         #endregion
@@ -184,7 +193,7 @@ public class Program
                 {
                     query = $"SELECT Createur FROM Client WHERE Mail = '{email}'";
                     command = new MySqlCommand(query, connection);
-                    if (command.ExecuteScalar().ToString() == "1")
+                    if (command.ExecuteScalar().ToString() == "True")
                     {
                         utilisateur = Profil.Createur;
                         WriteBanner((" Projet BDD", "Créateur", "Réalisé par Dimitry et Clément "), true, true);
@@ -285,10 +294,12 @@ public class Program
         
         int numRecette = ScrollingMenu($"{reader.GetName(0),-30} {reader.GetName(1),-30} {reader.GetName(2),-50} {reader.GetName(3),-25} {reader.GetName(4),-25}", recettes.ToArray(), Placement.Center, CursorTop + 2, true, 1500, 0, true);
         reader.Close();
+        if (numRecette == -1)
+            goto MainMenu;
         ClearContent();
         int nombreCommandes = (int)NumberSelector("Veuillez choisir le nombre de recettes que vous souhaitez acheter", 1f, 10f, 1f, 1f);
         if (nombreCommandes == -1)
-            nombreCommandes = 1;
+            goto AcheterRecette;
         #endregion
 
         #region Ajouter Commande
@@ -319,6 +330,81 @@ public class Program
         command = Command(query);
         command.ExecuteNonQuery();
         #endregion
+
+        goto MainMenu;
+        #endregion
+
+        CreerRecette:
+
+        #region CreerRecette
+        string nomRecette = WritePrompt("Veuillez entrer le nom de la recette :");
+        string categorieRecette = ScrollingMenuString("Veuillez choisir la catégorie de la recette", new string[] { "Entrée", "Plat", "Dessert" });
+        if (categorieRecette == "Retour")
+            goto MainMenu;
+        string descriptifRecette = WritePrompt("Veuillez entrer le descriptif de la recette :");
+
+
+        Ingredients:
+
+        query = $"SELECT Nom FROM Produit;";
+        List<string> ingredients = new List<string>();
+        reader = Reader(query);
+        while (reader.Read())
+            ingredients.Add(reader.GetString(0));
+        reader.Close();
+        ingredients.Add("Terminer la création");
+        List<string> ingredientsRecette = new List<string>();
+        List<int> quantitesRecette = new List<int>();
+        int numIngredient = 0;
+        while (ingredients.Count > 1 || numIngredient != ingredients.Count - 1)
+        {
+            ClearContent();
+            numIngredient = ScrollingMenu("Veuillez choisir un ingrédient à ajouter à la recette", ingredients.ToArray(), Placement.Center, -1, false, 0, numIngredient);
+            if (numIngredient == -1)
+            {
+                int choix = ScrollingMenu("Voulez-vous vraiment quitter la création de la recette ?", new string[] { "Oui", "Non" });
+                if (choix == 0)
+                    goto MainMenu;
+                else
+                    goto Ingredients;
+            }
+            else if (numIngredient == ingredients.Count - 1)
+                break;
+            else
+            {
+                int quantiteIngredient = (int)NumberSelector("Veuillez entrer la quantité de cet ingrédient :", 0f, 10f, 0f, 1f, CursorTop + 2);
+                if (quantiteIngredient == -1)
+                    quantiteIngredient = 1;
+                ingredientsRecette.Add(ingredients[numIngredient]);
+                quantitesRecette.Add(quantiteIngredient);
+                ingredients.RemoveAt(numIngredient);
+            }
+        }
+
+        float prixRecette = (int)NumberSelector("Veuillez entrer le prix de la recette :", 0f, 20f, 0f, 1f);
+        int ptsBonusRecette = (int)NumberSelector("Veuillez entrer le nombre de points bonus de la recette :", 0f, 30f, 0f, 1f);
+
+
+        query = $"INSERT INTO Recette (NomRec, CategorieRec, DescriptifRec, Prix, PtsBonus, idClient) VALUES ('{nomRecette}', '{categorieRecette}', '{descriptifRecette}', {prixRecette}, {ptsBonusRecette}, (SELECT idClient FROM Client WHERE Mail = '{email}'));";
+        command = Command(query);
+        command.ExecuteNonQuery();
+
+        query = $"SELECT MAX(idRecette) FROM Recette";
+        command = Command(query);
+        int idRecette = (int)command.ExecuteScalar();
+
+        for (int i = 0; i < ingredientsRecette.Count; i++)
+        {
+            query = $"INSERT INTO QuantiteProduit (idProduit, idrecette, QNeeded) VALUES ((SELECT idProduit FROM Produit WHERE Nom = '{ingredientsRecette[i]}'), {idRecette}, {quantitesRecette[i]})";
+            command = Command(query);
+            command.ExecuteNonQuery();
+        }
+        goto MainMenu;
+        #endregion
+
+        SupprimerRecette:
+
+        #region SupprimerRecette
 
         goto MainMenu;
         #endregion
