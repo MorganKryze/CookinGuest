@@ -379,7 +379,26 @@ public class Program
 
         #region AjouterProduit
         ClearContent();
-        
+        string nomProduit = WritePrompt("Veuillez entrer le nom du produit :");
+        string categorieProduit = WritePrompt("Veuillez entrer la catégorie du produit :");
+        string unit = ScrollingMenuString("Veuillez entrer l'unité du produit :", new string[] { "kg", "L", "unité" });
+        query = $"SELECT idFournisseur, NomFour FROM Fournisseur";
+        reader = Reader(query);
+        List<int> idFournisseurs = new List<int>();
+        List<string> nomFournisseurs = new List<string>();
+        while (reader.Read())
+        {
+            idFournisseurs.Add(reader.GetInt32(0));
+            nomFournisseurs.Add(reader.GetString(1));
+        }
+        reader.Close();
+        int idFournisseur = ScrollingMenu("Veuillez choisir le fournisseur du produit :", nomFournisseurs.ToArray());
+        if (idFournisseur == -1)
+            goto MainMenu;
+        query = $"INSERT INTO Produit (Nom, CategorieProd, Unit, StockAnn, StockMin, StockMax, idFournisseur)VALUES ('{nomProduit}', '{categorieProduit}', '{unit}', 500, 50, 2000, {idFournisseurs[idFournisseur]})";
+        command = Command(query);
+        command.ExecuteNonQuery();
+        goto MainMenu;
         #endregion
 
         AcheterRecette:
