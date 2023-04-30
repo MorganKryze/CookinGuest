@@ -115,7 +115,7 @@ public class Program
         else if (utilisateur is Profil.Administrateur)
         {
             ClearContent();
-            switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Ajouter Client", "Supprimer Client", "Supprimer Recette","Supprimer Commande", "Ajouter Fournisseur", "Options", "Déconnexion"}))
+            switch(ScrollingMenu("Bienvenue sur la plateforme CookinGuest !", new string[]{"Ajouter Client", "Supprimer Client", "Supprimer Recette","Supprimer Commande", "Ajouter Fournisseur", "Ajouter Produit", "Options", "Déconnexion"}))
             {
                 case 0:
                     goto Inscription;
@@ -126,10 +126,12 @@ public class Program
                 case 3:
                     goto SupprimerCommande;
                 case 4:
-                    break;
+                    goto AjouterFournisseur;
                 case 5:
-                    goto Options;
+                    goto AjouterProduit;
                 case 6:
+                    goto Options;
+                case 7:
                     utilisateur = Profil.NonDefini;
                     email = "";
                     mdp = "";
@@ -360,6 +362,26 @@ public class Program
             goto MainMenu;
         #endregion        
         
+        AjouterFournisseur:
+
+        #region AjouterFournisseur
+        ClearContent();
+        string nomFournisseur = WritePrompt("Veuillez entrer le nom du fournisseur :");
+        string numSiret = WritePrompt("Veuillez entrer le numéro de SIRET du fournisseur :");
+        string adresseFournisseur = WritePrompt("Veuillez entrer l'adresse du fournisseur :");
+        query = $"INSERT INTO Fournisseur (Nomfour, NumSiret, Adresse)VALUES ('{nomFournisseur}', '{numSiret}', '{adresseFournisseur}')";
+        command = Command(query);
+        command.ExecuteNonQuery();
+        goto MainMenu;
+        #endregion
+
+        AjouterProduit:
+
+        #region AjouterProduit
+        ClearContent();
+        
+        #endregion
+
         AcheterRecette:
 
         #region AcheterRecette
