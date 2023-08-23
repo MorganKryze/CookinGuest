@@ -1,0 +1,337 @@
+-- Création de la base de données Cookinguest
+
+CREATE DATABASE IF NOT EXISTS COOKINGUEST;
+
+USE COOKINGUEST;
+
+-- Création de la table Client pour stocker les informations sur les clients
+DROP TABLE IF EXISTS Client;
+CREATE TABLE
+    Client (
+        idClient INT PRIMARY KEY auto_increment,
+        Nom NVARCHAR(50),
+        -- Nom du client
+        Prenom NVARCHAR(50),
+        -- Prénom du client
+        Age INT,
+        -- Âge du client
+        Telephone NVARCHAR(20),
+        -- Numéro de téléphone du client
+        Domicile NVARCHAR(100),
+        -- Adresse du domicile du client
+        Mail NVARCHAR(100),
+        -- Adresse e-mail du client
+        PtsBonus INT,
+        -- Points bonus accumulés par le client en euros
+        Solde INT,
+        -- Points bonus accumulés par le client
+        MDP NVARCHAR(100),
+        -- mots de passe
+        Createur BOOLEAN -- créateur de recette ou pas false pas créateur true créateur
+    );
+
+
+-- Insérer des données aléatoires dans la table Client
+
+INSERT INTO
+    Client (
+        Nom,
+        Prenom,
+        Age,
+        Telephone,
+        Domicile,
+        Mail,
+        PtsBonus,
+        Solde,
+        MDP,
+        Createur
+    )
+VALUES (
+        'Doe',
+        'John',
+        32,
+        '0123456789',
+        '123 Rue Fictive',
+        'john.doe.test1@gmail.com',
+        100,
+        200,
+        'motdepasse1',
+        true
+    ), (
+        'Smith',
+        'Jane',
+        28,
+        '9876543210',
+        '456 Rue Imaginaire',
+        'jane.smith.test2@gmail.com',
+        0,
+        0,
+        'motdepasse2',
+        false
+    ), (
+        'Brown',
+        'Michael',
+        45,
+        '1234567890',
+        '789 Rue Inexistante',
+        'michael.brown.test3@gmail.com',
+        300,
+        600,
+        'motdepasse3',
+        true
+    ), (
+        'Johnson',
+        'Emily',
+        24,
+        '0987654321',
+        '147 Rue Inventée',
+        'emily.johnson.test4@gmail.com',
+        0,
+        0,
+        'motdepasse4',
+        false
+    ),(
+        'Trajh',
+        'Marc',
+        32,
+        '0123456789',
+        '123 Rue Fictive',
+        'test@test.com',
+        0,
+        0,
+        'mdp',
+        false
+    );
+
+-- Création de la table Recette pour stocker les informations sur les recettes
+DROP TABLE IF EXISTS `Recette`;
+CREATE TABLE
+    Recette (
+        idRecette INT PRIMARY KEY auto_increment,
+        NomRec NVARCHAR(100),
+        -- Nom de la recette
+        CategorieRec NVARCHAR(50),
+        -- Catégorie de la recette
+        descriptifRec NVARCHAR(1000),
+        -- Description de la recette
+        Prix double,
+        -- Prix de la recette
+        PtsBonus INT, -- Points bonus pour la recette
+        idClient INT REFERENCES Client(idClient) -- Clé étrangère référençant la table Client
+    );
+
+-- Insérer des données aléatoires dans la table Recette
+
+INSERT INTO
+    Recette (
+        NomRec,
+        CategorieRec,
+        descriptifRec,
+        Prix,
+        PtsBonus,
+        idClient
+    )
+VALUES (
+        'Salade César',
+        'Entrée',
+        'Salade César avec poulet grillé, croûtons, parmesan',
+        8.0,
+        10,
+        1
+    ), (
+        'Spaghetti Carbonara',
+        'Plat',
+        'Spaghetti avec sauce Carbonara, lardons, œuf et parmesan',
+        12.0,
+        15,
+        1
+    ), (
+        'Tiramisu',
+        'Dessert',
+        'Tiramisu avec mascarpone, café, biscuits cuillère et cacao',
+        6.0,
+        8,
+        3
+    );
+
+-- Création de la table Commande pour stocker les informations sur les commandes
+DROP TABLE IF EXISTS `Commande`;
+CREATE TABLE
+    Commande (
+        idCommande INT PRIMARY KEY auto_increment,
+        date DATETIME,
+        -- Date et heure de la commande
+        adresse NVARCHAR(100),
+        -- Adresse de livraison de la commande
+        idClient INT REFERENCES Client(idClient) -- Clé étrangère référençant la table Client
+    );
+
+-- Insérer des données aléatoires dans la table Commande
+
+INSERT INTO
+    Commande (date, adresse, idClient)
+VALUES (
+        '2023-04-20 12:00:00',
+        '10 Rue de la Paix, 75000 Paris',
+        1
+    ), (
+        '2023-04-20 12:15:00',
+        '20 Rue du Temple, 75000 Paris',
+        2
+    ), (
+        '2023-04-20 12:30:00',
+        '30 Rue de Rivoli, 75000 Paris',
+        3
+    );
+
+-- Création de la table DetCommande pour stocker les détails des commandes
+DROP TABLE IF EXISTS `DetCommande`;
+CREATE TABLE
+    DetCommande (
+        idRecette INT REFERENCES Recette(idRecette),
+        -- Clé étrangère référençant la table Recette
+        idCommande INT REFERENCES Commande(idCommande),
+        -- Clé étrangère référençant la table Commande
+        QCommande INT,
+        -- Quantité commandée
+        PRIMARY KEY (idRecette, idCommande)
+    );
+
+-- Insérer des données aléatoires dans la table DetCommande
+
+INSERT INTO
+    DetCommande (
+        idRecette,
+        idCommande,
+        QCommande
+    )
+VALUES (1, 1, 2), (2, 2, 1), (3, 3, 3);
+
+-- Création de la table Produit pour stocker les informations sur les produits
+DROP TABLE IF EXISTS `Produit`;
+CREATE TABLE
+    Produit (
+        idProduit INT PRIMARY KEY auto_increment,
+        Nom NVARCHAR(100),
+        -- Nom du produit
+        CategorieProd NVARCHAR(50),
+        -- Catégorie du produit
+        Unit NVARCHAR(50),
+        -- Unité de mesure du produit
+        StockAnn INT,
+        -- Stock annuel du produit
+        StockMin INT,
+        -- Stock minimum du produit
+        stockMax INT, -- Stock maximum du produit
+        idFournisseur INT REFERENCES Fournisseur(idFournisseur) -- Clé étrangère référençant la table Fournisseur
+    );
+
+-- Insérer des données aléatoires dans la table Produit
+
+INSERT INTO
+    Produit (
+        Nom,
+        CategorieProd,
+        Unit,
+        StockAnn,
+        StockMin,
+        stockMax,
+        idFournisseur
+    )
+VALUES (
+        'Tomates',
+        'Légumes',
+        'kg',
+        500,
+        50,
+        1000,
+        1
+    ), (
+        'Oeufs',
+        'Produits laitiers',
+        'unité',
+        1000,
+        100,
+        2000,
+        2
+    ), (
+        'Farine',
+        'Épicerie',
+        'kg',
+        200,
+        20,
+        400,
+        3
+    );
+
+-- Création de la table QuantiteProduit pour stocker la quantité de produits nécessaires pour chaque recette
+DROP TABLE IF EXISTS `QuantiteProduit`;
+CREATE TABLE
+    QuantiteProduit (
+        idProduit INT REFERENCES Produit(idProduit),
+        -- Clé étrangère référençant la table Produit
+        idrecette INT REFERENCES Recette(idRecette),
+        -- Clé étrangère référençant la table Recette
+        QNeeded INT,
+        -- Quantité nécessaire de produit pour la recette
+        PRIMARY KEY (idProduit, idrecette)
+    );
+
+-- Insérer des données aléatoires dans la table QuantiteProduit
+
+INSERT INTO
+    QuantiteProduit (idProduit, idrecette, QNeeded)
+VALUES (1, 1, 2), (2, 2, 4), (3, 3, 1);
+
+-- Création de la table Fournisseur pour stocker les informations sur les fournisseurs
+DROP TABLE IF EXISTS `Fournisseur`;
+CREATE TABLE
+    Fournisseur (
+        idFournisseur INT PRIMARY KEY auto_increment,
+        NomFour NVARCHAR(100),
+        -- Nom du fournisseur
+        NumSiret NVARCHAR(14),
+        -- Numéro SIRET du fournisseur
+        Adresse NVARCHAR(100) -- Adresse du fournisseur
+    );
+
+-- Insérer des données aléatoires dans la table Fournisseur
+
+INSERT INTO
+    Fournisseur (NomFour, NumSiret, Adresse)
+VALUES (
+        'Legumes Express',
+        '12345678912345',
+        '1 Rue des Legumes, 75000 Paris'
+    ), (
+        'OeufLand',
+        '23456789123456',
+        '2 Rue des Oeufs, 75000 Paris'
+    ), (
+        'Epicerie Gourmet',
+        '34567891234567',
+        '3 Rue de l''Epicerie, 75000 Paris'
+    );
+
+-- Création de la table FournisseurProd pour associer les fournisseurs aux produits qu'ils fournissent
+DROP TABLE IF EXISTS FournisseurProd;
+CREATE TABLE
+    FournisseurProd (
+        idFournisseur INT REFERENCES Fournisseur(idFournisseur),
+        -- Clé étrangère référençant la table Fournisseur
+        idProduit INT REFERENCES Produit(idProduit),
+        -- Clé étrangère référençant la table Produit
+        QFournit INT,
+        -- Quantité fournie
+        PRIMARY KEY (idFournisseur, idProduit)
+    );
+
+-- Insérer des données aléatoires dans la table FournisseurProd
+
+INSERT INTO
+    FournisseurProd (
+        idFournisseur,
+        idProduit,
+        QFournit
+    )
+VALUES (1, 1, 100), (2, 2, 50), (3, 3, 200);
